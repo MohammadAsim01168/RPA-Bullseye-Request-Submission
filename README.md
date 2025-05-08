@@ -1,4 +1,4 @@
-# Team Recap Application
+# Bullseye Request Submission Application
 
 A Streamlit application for managing brand and company submissions across different platforms.
 
@@ -24,12 +24,12 @@ A Streamlit application for managing brand and company submissions across differ
 3. Create a `.env` file with your Snowflake credentials:
    ```
    ENV_TYPE=Test
-   KEEPA_SNOWFLAKE_USER=your_username
-   KEEPA_SNOWFLAKE_ACCOUNT=your_account
-   KEEPA_SNOWFLAKE_WAREHOUSE=your_warehouse
-   KEEPA_SNOWFLAKE_DATABASE=your_database
-   KEEPA_SNOWFLAKE_SCHEMA=your_schema
-   KEEPA_SNOWFLAKE_ROLE=your_role
+   RPA_BULLSEYE_SNOWFLAKE_USER=your_username
+   RPA_BULLSEYE_SNOWFLAKE_ACCOUNT=your_account
+   RPA_BULLSEYE_SNOWFLAKE_WAREHOUSE=your_warehouse
+   RPA_BULLSEYE_SNOWFLAKE_DATABASE=your_database
+   RPA_BULLSEYE_SNOWFLAKE_SCHEMA=your_schema
+   RPA_BULLSEYE_SNOWFLAKE_ROLE=your_role
    ```
 4. Run the application:
    ```bash
@@ -59,12 +59,12 @@ A Streamlit application for managing brand and company submissions across differ
    - Go to Settings > CI/CD > Variables
    - Add the following variables (make them protected and masked):
      ```
-     KEEPA_SNOWFLAKE_USER
-     KEEPA_SNOWFLAKE_ACCOUNT
-     KEEPA_SNOWFLAKE_WAREHOUSE
-     KEEPA_SNOWFLAKE_DATABASE
-     KEEPA_SNOWFLAKE_SCHEMA
-     KEEPA_SNOWFLAKE_ROLE
+     RPA_BULLSEYE_SNOWFLAKE_USER
+     RPA_BULLSEYE_SNOWFLAKE_ACCOUNT
+     RPA_BULLSEYE_SNOWFLAKE_WAREHOUSE
+     RPA_BULLSEYE_SNOWFLAKE_DATABASE
+     RPA_BULLSEYE_SNOWFLAKE_SCHEMA
+     RPA_BULLSEYE_SNOWFLAKE_ROLE
      ENV_TYPE
      ```
 
