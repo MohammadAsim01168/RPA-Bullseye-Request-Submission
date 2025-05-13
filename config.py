@@ -42,22 +42,6 @@ def get_snowflake_config():
 # Get the configuration
 SNOWFLAKE_CONFIG = get_snowflake_config()
 
-# Debug information (only in development)
-if ENV_TYPE == 'Test':
-    print(f"Debug - Environment Type: {ENV_TYPE}")
-    print(f"Debug - Using Tables:")
-    print(f"- KEEPA_QUERIES_TABLE: {KEEPA_QUERIES_TABLE}")
-    print(f"- ECHO_QUERIES_TABLE: {ECHO_QUERIES_TABLE}")
-    print("Debug - Environment Variables:")
-    print(f"RPA_BULLSEYE_ENV_TYPE: {os.getenv('RPA_BULLSEYE_ENV_TYPE')}")
-    print(f"RPA_BULLSEYE_SNOWFLAKE_USER: {os.getenv('RPA_BULLSEYE_SNOWFLAKE_USER')}")
-    print("RPA_BULLSEYE_SNOWFLAKE_PASSWORD: [MASKED]")
-    print(f"RPA_BULLSEYE_SNOWFLAKE_ACCOUNT: {os.getenv('RPA_BULLSEYE_SNOWFLAKE_ACCOUNT')}")
-    print(f"RPA_BULLSEYE_SNOWFLAKE_WAREHOUSE: {os.getenv('RPA_BULLSEYE_SNOWFLAKE_WAREHOUSE')}")
-    print(f"RPA_BULLSEYE_SNOWFLAKE_DATABASE: {os.getenv('RPA_BULLSEYE_SNOWFLAKE_DATABASE')}")
-    print(f"RPA_BULLSEYE_SNOWFLAKE_SCHEMA: {os.getenv('RPA_BULLSEYE_SNOWFLAKE_SCHEMA')}")
-    print(f"RPA_BULLSEYE_SNOWFLAKE_ROLE: {os.getenv('RPA_BULLSEYE_SNOWFLAKE_ROLE')}")
-
 # Keepa Queries Table Snowflake configuration
 KEEPA_SNOWFLAKE_CONFIG = {
     'user': os.getenv('RPA_BULLSEYE_SNOWFLAKE_USER'),
