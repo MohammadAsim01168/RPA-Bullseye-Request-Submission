@@ -17,6 +17,7 @@ from shared_functions import (
 )
 import re
 import getpass
+from amazon import show_amazon_section
 
 def is_valid_url(url):
     """Validate if the input is a valid URL"""
@@ -119,11 +120,15 @@ def insert_into_keepa_table(company_data, req_guid, selection_type, brand_name=N
             # For Home Depot and Lowes, use the URL as query value
             query_value = brand_name if x_amazon_type.lower() in ['homedepot', 'lowes'] else brand_name
             table_name = "BOABD.INPUTDATA.ECHO_QUERIES_DEV" if RUN_TYPE == "Test" else "BOABD.INPUTDATA.ECHO_QUERIES"
+            st.write(f"Debug - Using ECHO_QUERIES table for {x_amazon_type} submission")  # Debug log
         else:
             # For Amazon submissions, use KEEPA_QUERIES table
             query_type = "manufacturer_only" if selection_type == "Company" else "brand"
             query_value = company_data[3] if selection_type == "Company" else brand_name
             table_name = KEEPA_QUERIES_TABLE
+            st.write(f"Debug - Using KEEPA_QUERIES table for Amazon {selection_type} submission")  # Debug log
+        
+        st.write(f"Debug - Query Type: {query_type}, Query Value: {query_value}")  # Debug log
         
         query = f"""
         INSERT INTO {table_name} (
@@ -145,12 +150,14 @@ def insert_into_keepa_table(company_data, req_guid, selection_type, brand_name=N
             query_type,
             query_value,
             req_guid,  # Use REQUEST_GUID from BULLSEYE_REQUEST
-            "0"  # STATUS
+            "0",  # STATUS
+            req_guid
         ))
         
         conn.commit()
         cursor.close()
         conn.close()
+        st.write(f"Debug - Successfully inserted into {table_name}")  # Debug log
         return True
     except Exception as e:
         st.error(f"Error inserting into {table_name}: {str(e)}")
@@ -197,16 +204,26 @@ def update_selection(selection_type, selection_value, x_amazon_type=None):
             
             # Prepare values based on selection type
             if selection_type == "Company":
+                # Check if search results exist
+                if not st.session_state.amazon_search_results:
+                    st.error("No search results available. Please search for a company first.")
+                    return
+                
                 # Find the company data from search results
-                company_data = next((row for row in st.session_state.search_results if row[1] == selection_value), None)
+                company_data = next((row for row in st.session_state.amazon_search_results if row[1] == selection_value), None)
                 if company_data:
                     company_name = company_data[1]  # Use company_name from row[1]
                     concat_lead_list_name = company_data[3]  # Use concat_lead_list_name from row[3]
                     brand_name = "NOTSPECIFIEDUNUSED"
                     request_type = "Amazon Company Name"
                     status = "0"
+                    is_multiple = "False"  # Single entry for company name
+                    url_value = None  # URL is blank for company name
+                    requestor_email = st.session_state.requestor_email  # Capture requestor email
+                    st.write(f"Debug - Company Data: {company_data}")  # Debug log
                 else:
-                    st.error("Company data not found")
+                    st.error(f"Company data not found for: {selection_value}")
+                    st.write(f"Debug - Available search results: {st.session_state.amazon_search_results}")  # Debug log
                     return
             else:  # Brand selection
                 if x_amazon_type == "Home Depot":
@@ -215,31 +232,46 @@ def update_selection(selection_type, selection_value, x_amazon_type=None):
                     concat_lead_list_name = "NOTSPECIFIEDUNUSED"
                     request_type = "HomeDepot Brand"
                     status = "0"
+                    is_multiple = "Yes"  # Assume multiple brands for Home Depot
+                    url_value = selection_value  # Use URL for Home Depot
+                    requestor_email = st.session_state.requestor_email
                 elif x_amazon_type == "Lowes":
                     brand_name = "NOTSPECIFIEDUNUSED"
                     company_name = "NOTSPECIFIEDUNUSED"
                     concat_lead_list_name = "NOTSPECIFIEDUNUSED"
                     request_type = "Lowes Brand"
                     status = "0"
+                    is_multiple = "Yes"  # Assume multiple brands for Lowes
+                    url_value = selection_value  # Use URL for Lowes
+                    requestor_email = st.session_state.requestor_email
                 elif x_amazon_type == "Target":
                     brand_name = selection_value
                     company_name = "NOTSPECIFIEDUNUSED"
                     concat_lead_list_name = "NOTSPECIFIEDUNUSED"
                     request_type = "Target Brand"
                     status = "0"
+                    is_multiple = "Yes"  # Assume multiple brands for Target
+                    url_value = None
+                    requestor_email = st.session_state.requestor_email
                 elif x_amazon_type == "Walmart":
                     brand_name = selection_value
                     company_name = "NOTSPECIFIEDUNUSED"
                     concat_lead_list_name = "NOTSPECIFIEDUNUSED"
                     request_type = "Walmart Brand"
                     status = "0"
+                    is_multiple = "Yes"  # Assume multiple brands for Walmart
+                    url_value = None
+                    requestor_email = st.session_state.requestor_email
                 else:
                     brand_name = selection_value
                     company_name = "NOTSPECIFIEDUNUSED"
                     concat_lead_list_name = "NOTSPECIFIEDUNUSED"
                     # Set request type based on submission type
-                    request_type = "Amazon Brand Name New" if st.session_state.submission_type == "Missing Brand" else "Amazon Brand Name"
+                    request_type = "Amazon Brand Name New" if st.session_state.submission_type == "Brand Not in HubSpot" else "Amazon Brand Name"
                     status = "0"
+                    is_multiple = "Yes"  # Assume multiple brands for general brand submissions
+                    url_value = None
+                    requestor_email = st.session_state.requestor_email
 
             # Check if selection_value contains semicolons (multiple brands)
             if ";" in selection_value:
@@ -257,6 +289,7 @@ def update_selection(selection_type, selection_value, x_amazon_type=None):
                 REQUEST_SUBMISSION_TIME,
                 REQUEST_TYPE,
                 REQUESTOR,
+                REQUESTOR_EMAIL,
                 STATUS,
                 ISMULTIPLEBRANDSUBMISSION,
                 REQ_GUID,
@@ -270,50 +303,62 @@ def update_selection(selection_type, selection_value, x_amazon_type=None):
                 %s,
                 %s,
                 %s,
-                'No',
+                %s,
+                %s,
                 %s,
                 %s,
                 %s
             )
             """
             
-            # Set URL value based on x_amazon_type
-            url_value = selection_value if x_amazon_type in ["Home Depot", "Lowes"] else None
-            
-            cursor.execute(query, (
-                brand_name,
-                company_name,
-                concat_lead_list_name,
-                request_type,
-                requestor,
-                status,
-                req_guid,
-                run_type,
-                url_value
-            ))
-            
-            conn.commit()
-            cursor.close()
-            conn.close()
+            try:
+                cursor.execute(query, (
+                    brand_name,
+                    company_name,
+                    concat_lead_list_name,
+                    request_type,
+                    requestor,
+                    requestor_email,  # Include requestor email
+                    status,
+                    is_multiple,
+                    req_guid,
+                    run_type,
+                    url_value
+                ))
+                conn.commit()
+                st.success(f"✅ Record Added to Request Table: {selection_value}")
+            except Exception as e:
+                st.error(f"Failed to insert into BULLSEYE_REQUEST: {str(e)}")
+                return
 
             # For company submissions, insert into Keepa Table and update status
             if selection_type == "Company":
+                st.write(f"Debug - Attempting to insert company data: {company_data}")  # Debug log
+                if not company_data:  # Additional check
+                    st.error("Company data is missing. Cannot proceed with submission.")
+                    return
+                    
                 if insert_into_keepa_table(company_data, req_guid, selection_type):
+                    st.success(f"✅ Sent to Keepa/Echo Table: {selection_value}")
                     if update_bullseye_status(req_guid, "2"):
-                        st.success(f"Successfully submitted company request and updated status: {selection_value}")
+                        st.success(f"✅ Successfully Submitted: {selection_value}")
                     else:
-                        st.warning(f"Company request submitted but status update failed: {selection_value}")
+                        st.error(f"❌ Failed to update status for: {selection_value}")
                 else:
-                    st.warning(f"Company request submitted but Keepa Table insertion failed: {selection_value}")
+                    st.error(f"❌ Failed to process company '{selection_value}'. The request was not added to the processing queue. Please try again or contact support.")
             else:
                 # For brand submissions, also insert into Keepa Table and update status
                 if insert_into_keepa_table(None, req_guid, selection_type, selection_value, x_amazon_type):
+                    st.success(f"✅ Sent to Keepa/Echo Table: {selection_value}")
                     if update_bullseye_status(req_guid, "2"):
-                        st.success(f"Successfully submitted {selection_type} request: {selection_value}")
+                        st.success(f"✅ Successfully Submitted: {selection_value}")
                     else:
-                        st.warning(f"Brand request submitted but status update failed: {selection_value}")
+                        st.error(f"❌ Failed to update status for: {selection_value}")
                 else:
-                    st.warning(f"Brand request submitted but Keepa Table insertion failed: {selection_value}")
+                    st.error(f"❌ Failed to process brand '{selection_value}'. The request was not added to the processing queue. Please try again or contact support.")
+
+            cursor.close()
+            conn.close()
 
         except Exception as e:
             st.error(f"Error submitting request: {str(e)}")
@@ -340,7 +385,7 @@ def update_multiple_brands(brands_list, x_amazon_type):
             elif x_amazon_type == "Walmart":
                 request_type = "Walmart Brand"
             else:
-                request_type = "Amazon Brand Name New" if st.session_state.submission_type == "Missing Brand" else "Amazon Brand Name"
+                request_type = "Amazon Brand Name New" if st.session_state.submission_type == "Brand Not in HubSpot" else "Amazon Brand Name"
             
             # Set ISMULTIPLEBRANDSUBMISSION based on number of brands
             is_multiple = 'Yes' if len(brands_list) > 1 else 'No'
@@ -354,6 +399,7 @@ def update_multiple_brands(brands_list, x_amazon_type):
                     REQUEST_SUBMISSION_TIME,
                     REQUEST_TYPE,
                     REQUESTOR,
+                    REQUESTOR_EMAIL,
                     STATUS,
                     ISMULTIPLEBRANDSUBMISSION,
                     REQ_GUID,
@@ -364,6 +410,7 @@ def update_multiple_brands(brands_list, x_amazon_type):
                     'NOTSPECIFIEDUNUSED',
                     'NOTSPECIFIEDUNUSED',
                     CURRENT_TIMESTAMP,
+                    %s,
                     %s,
                     %s,
                     '0',
@@ -381,6 +428,7 @@ def update_multiple_brands(brands_list, x_amazon_type):
                     brand,  # brand is already a string
                     request_type,
                     requestor,
+                    st.session_state.requestor_email,  # Add requestor email
                     is_multiple,
                     req_guid,
                     run_type,
@@ -408,127 +456,72 @@ def update_multiple_brands(brands_list, x_amazon_type):
         except Exception as e:
             st.error(f"Error submitting multiple brand requests: {str(e)}")
 
-# Main app
-app_type = st.radio(
-    "Select Application Type:",
-    ["Amazon Submission", "X-Amazon Submission"],
-    key="app_type"
-)
+def validate_email(email):
+    """Validate email format"""
+    if not email:
+        return False, "Email is required"
+    
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_pattern, email):
+        return False, "Invalid email format"
+    
+    return True, ""
 
-# Add requestor name input field at the top level with system username as default
-requestor_name = st.text_input(
-    "Enter Your Name:",
-    value=st.session_state.requestor_name,
-    help="Please enter your name for tracking purposes"
-)
+def main():
+    st.set_page_config(
+        page_title="Amazon Submission App",
+        page_icon="🛍️",
+        layout="wide"
+    )
 
-# Update session state with the input value
-if requestor_name and requestor_name.strip():
-    st.session_state.requestor_name = requestor_name
-else:
-    st.session_state.requestor_name = REQUESTOR
+    # Initialize session state variables
+    if 'requestor_name' not in st.session_state:
+        st.session_state.requestor_name = "RPA Bot"
+    if 'requestor_email' not in st.session_state:
+        st.session_state.requestor_email = "mohammad.asim@spreetail.com"
+    if 'amazon_search_results' not in st.session_state:
+        st.session_state.amazon_search_results = None
+    if 'submission_type' not in st.session_state:
+        st.session_state.submission_type = None
 
-# Initialize session state variables
-if 'search_results' not in st.session_state:
-    st.session_state.search_results = None
-if 'submission_type' not in st.session_state:
-    st.session_state.submission_type = None
-
-if app_type == "Amazon Submission":
-    st.title("Amazon Submission")
-
-    # Add a loading spinner while initializing
-    with st.spinner('Initializing application...'):
-        # Selection type radio buttons
-        submission_type = st.radio(
-            "Select Submission Type:",
-            ["Brand Name", "Missing Brand", "Company Name"],
-            key="submission_type"
+    # Requestor Information Section
+    st.subheader("Requestor Information")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        requestor_name = st.text_input(
+            "Requestor Name:",
+            value=st.session_state.requestor_name,
+            help="Name of the person making the request"
         )
+        st.session_state.requestor_name = requestor_name
+    
+    with col2:
+        requestor_email = st.text_input(
+            "Requestor Email:",
+            value=st.session_state.requestor_email,
+            help="Email address of the requestor (required)",
+            placeholder="Enter your email address"
+        )
+        if not requestor_email:
+            st.error("Email is required")
+        else:
+            is_valid_email, email_error = validate_email(requestor_email)
+            if not is_valid_email:
+                st.error(email_error)
+            else:
+                st.session_state.requestor_email = requestor_email
 
-        # Handle different submission types
-        if submission_type == "Brand Name":
-            # Search box for brand selection
-            search_term = st.text_input(
-                "Search Brand:",
-                help="Type to search for available options"
-            )
-            
-            if search_term:
-                search_results = search_items(search_term, "Brand Name")
-                st.session_state.search_results = search_results
-                
-                if search_results:
-                    # For brand search, results are already just brand names
-                    selected_values = st.multiselect(
-                        "Select Brand(s):",
-                        options=search_results,
-                        key="brand_select"
-                    )
-                    
-                    if st.button("Submit Selected Brands"):
-                        with st.spinner('Submitting brands...'):
-                            if selected_values:
-                                if len(selected_values) > 1:
-                                    update_multiple_brands(selected_values, None)
-                                else:
-                                    update_selection("Brand", selected_values[0], None)
-                            else:
-                                st.warning("Please select at least one brand.")
-                else:
-                    st.info("No brands found.")
+    # Only proceed if email is valid
+    if requestor_email and validate_email(requestor_email)[0]:
+        # Create tabs for Amazon and X-Amazon sections
+        tab1, tab2 = st.tabs(["Amazon", "X-Amazon"])
         
-        elif submission_type == "Missing Brand":
-            # Manual brand entry
-            brand_name = st.text_input(
-                "Enter Brand Name:",
-                help="Type the brand name manually"
-            )
-            
-            # Add note about multiple brands
-            st.info("For multiple brands, enter them separated by semicolons (e.g., brand1;brand2;brand3)")
-            
-            if st.button("Submit Missing Brand"):
-                with st.spinner('Submitting missing brand...'):
-                    if brand_name:
-                        update_selection("Brand", brand_name)
-                    else:
-                        st.warning("Please enter a brand name.")
+        with tab1:
+            show_amazon_section()
         
-        elif submission_type == "Company Name":
-            # Search box for company selection
-            search_term = st.text_input(
-                "Search Company:",
-                help="Type to search for available options"
-            )
-            
-            if search_term:
-                search_results = search_items(search_term, "Company Name")
-                st.session_state.search_results = search_results
-                
-                if search_results:
-                    # For company search, show company names in dropdown
-                    company_names = [row[1] for row in search_results]
-                    selected_company = st.selectbox(
-                        "Select Company:",
-                        options=company_names,
-                        key="company_select"
-                    )
-                    
-                    if st.button("Submit Selected Company"):
-                        with st.spinner('Submitting company...'):
-                            if selected_company:
-                                update_selection("Company", selected_company)
-                            else:
-                                st.warning("Please select a company.")
-                else:
-                    st.info("No companies found.")
+        with tab2:
+            show_x_amazon_section()
 
-        # Display current selection
-        if submission_type in ["Brand Name", "Company Name"] and 'selected_values' in locals() and selected_values:
-            # Convert to list if it's a tuple and ensure all items are strings
-            display_values = [str(val) for val in selected_values]
-            st.info(f"Current Selection: {', '.join(display_values)}")
-
-else:  # X-Amazon Submission
-    show_x_amazon_section() 
+if __name__ == "__main__":
+    main() 
