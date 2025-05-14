@@ -10,7 +10,7 @@ load_dotenv(override=True)
 # Change this value to switch between environments:
 # ENV_TYPE = "Prod"  # For Production
 # ENV_TYPE = "Test"  # For Testing
-ENV_TYPE = "Test"
+ENV_TYPE = "Prod"
 # =============================================
 
 # Table configurations based on environment
