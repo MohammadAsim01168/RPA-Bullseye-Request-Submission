@@ -5,22 +5,20 @@ import streamlit as st
 # Load environment variables from .env file (for local development)
 load_dotenv(override=True)
 
-# Environment configuration
-def get_env_type():
-    """Get environment type from Streamlit secrets or environment variables"""
-    if 'RPA_BULLSEYE_ENV_TYPE' in st.secrets:
-        return st.secrets['RPA_BULLSEYE_ENV_TYPE']
-    return os.getenv('RPA_BULLSEYE_ENV_TYPE', 'Test')
-
-# Get environment type
-ENV_TYPE = get_env_type()
+# =============================================
+# Environment Configuration
+# Change this value to switch between environments:
+# ENV_TYPE = "Prod"  # For Production
+# ENV_TYPE = "Test"  # For Testing
+ENV_TYPE = "Prod"
+# =============================================
 
 # Table configurations based on environment
 KEEPA_QUERIES_TABLE = "BOABD.INPUTDATA.KEEPA_QUERIES_DEV" if ENV_TYPE == "Test" else "BOABD.INPUTDATA.KEEPA_QUERIES"
 ECHO_QUERIES_TABLE = "BOABD.INPUTDATA.ECHO_QUERIES_DEV" if ENV_TYPE == "Test" else "BOABD.INPUTDATA.ECHO_QUERIES"
 
-# Run type configuration
-RUN_TYPE = "Test" if ENV_TYPE == "Test" else "Prod"
+# Run type configuration - Use same value as ENV_TYPE
+RUN_TYPE = ENV_TYPE
 
 # Try to get credentials from Streamlit secrets first (for cloud deployment)
 # If not found, fall back to environment variables (for local development)
