@@ -107,15 +107,15 @@ def insert_into_keepa_table(company_data, req_guid, selection_type, brand_name=N
             # For X-Amazon submissions, use ECHO_QUERIES table
             query_type = "homedepot_brand" if x_amazon_type == "Home Depot" else "lowes_brand" if x_amazon_type == "Lowes" else f"{x_amazon_type.lower()}_brand"
             query_value = brand_name if x_amazon_type.lower() in ['homedepot', 'lowes'] else brand_name
-            # Use environment type from config
-            table_name = "BOABD.INPUTDATA.ECHO_QUERIES_DEV" if RUN_TYPE == "Test" else "BOABD.INPUTDATA.ECHO_QUERIES"
+            # Use environment type from secrets.toml
+            table_name = "BOABD.INPUTDATA.ECHO_QUERIES_DEV" if st.secrets["RPA_BULLSEYE_ENV_TYPE"] == "Test" else "BOABD.INPUTDATA.ECHO_QUERIES"
             st.write(f"Debug - Using {table_name} for {x_amazon_type} submission")  # Debug log
         else:
             # For Amazon submissions, use KEEPA_QUERIES table
             query_type = "manufacturer_only" if selection_type == "Company" else "brand"
             query_value = company_data[3] if selection_type == "Company" else brand_name
-            # Use environment type from config
-            table_name = "BOABD.INPUTDATA.KEEPA_QUERIES_DEV" if RUN_TYPE == "Test" else "BOABD.INPUTDATA.KEEPA_QUERIES"
+            # Use environment type from secrets.toml
+            table_name = "BOABD.INPUTDATA.KEEPA_QUERIES_DEV" if st.secrets["RPA_BULLSEYE_ENV_TYPE"] == "Test" else "BOABD.INPUTDATA.KEEPA_QUERIES"
             st.write(f"Debug - Using {table_name} for Amazon {selection_type} submission")  # Debug log
         
         query = f"""
