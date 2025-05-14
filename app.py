@@ -1,6 +1,5 @@
 import streamlit as st
 import snowflake.connector
-from dotenv import load_dotenv
 import os
 import pandas as pd
 import uuid
@@ -40,9 +39,6 @@ def get_user_name():
         return getpass.getuser()
     except:
         return "RPA Bot"
-
-# Load environment variables
-load_dotenv(override=True)  # Force override existing variables
 
 # Global requestor variable
 REQUESTOR = "RPA Bot"
@@ -115,9 +111,7 @@ def insert_into_keepa_table(company_data, req_guid, selection_type, brand_name=N
         # Set query type and value based on selection type and X-Amazon type
         if x_amazon_type:
             # For X-Amazon submissions, use ECHO_QUERIES table
-            # Convert "Home Depot" to "homedepot" and "Lowes" to "lowes" for query_type
             query_type = "homedepot_brand" if x_amazon_type == "Home Depot" else "lowes_brand" if x_amazon_type == "Lowes" else f"{x_amazon_type.lower()}_brand"
-            # For Home Depot and Lowes, use the URL as query value
             query_value = brand_name if x_amazon_type.lower() in ['homedepot', 'lowes'] else brand_name
             table_name = "BOABD.INPUTDATA.ECHO_QUERIES_DEV" if ENV_TYPE == "Test" else "BOABD.INPUTDATA.ECHO_QUERIES"
             st.write(f"Debug - Using ECHO_QUERIES table for {x_amazon_type} submission")  # Debug log
@@ -125,10 +119,11 @@ def insert_into_keepa_table(company_data, req_guid, selection_type, brand_name=N
             # For Amazon submissions, use KEEPA_QUERIES table
             query_type = "manufacturer_only" if selection_type == "Company" else "brand"
             query_value = company_data[3] if selection_type == "Company" else brand_name
-            table_name = KEEPA_QUERIES_TABLE
+            table_name = "BOABD.INPUTDATA.KEEPA_QUERIES_DEV" if ENV_TYPE == "Test" else "BOABD.INPUTDATA.KEEPA_QUERIES"
             st.write(f"Debug - Using KEEPA_QUERIES table for Amazon {selection_type} submission")  # Debug log
         
-        st.write(f"Debug - Query Type: {query_type}, Query Value: {query_value}")  # Debug log
+        st.write(f"Debug - ENV_TYPE: {ENV_TYPE}")  # Debug log for ENV_TYPE
+        st.write(f"Debug - Using table: {table_name}")  # Debug log for table selection
         
         query = f"""
         INSERT INTO {table_name} (
@@ -149,15 +144,13 @@ def insert_into_keepa_table(company_data, req_guid, selection_type, brand_name=N
         cursor.execute(query, (
             query_type,
             query_value,
-            req_guid,  # Use REQUEST_GUID from BULLSEYE_REQUEST
-            "0",  # STATUS
-            req_guid
+            req_guid,
+            "0"  # STATUS
         ))
         
         conn.commit()
         cursor.close()
         conn.close()
-        st.write(f"Debug - Successfully inserted into {table_name}")  # Debug log
         return True
     except Exception as e:
         st.error(f"Error inserting into {table_name}: {str(e)}")
