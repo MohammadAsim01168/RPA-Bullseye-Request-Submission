@@ -1,16 +1,12 @@
 import os
-from dotenv import load_dotenv
 import streamlit as st
-
-# Load environment variables from .env file (for local development)
-load_dotenv(override=True)
 
 # =============================================
 # Environment Configuration
 # Change this value to switch between environments:
 # ENV_TYPE = "Prod"  # For Production
 # ENV_TYPE = "Test"  # For Testing
-ENV_TYPE = "Prod"
+ENV_TYPE = "Prod"  # Hardcoded to Test environment
 # =============================================
 
 # Table configurations based on environment
