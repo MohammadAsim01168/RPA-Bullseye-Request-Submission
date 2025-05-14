@@ -105,16 +105,18 @@ def insert_into_keepa_table(company_data, req_guid, selection_type, brand_name=N
         # Set query type and value based on selection type and X-Amazon type
         if x_amazon_type:
             # For X-Amazon submissions, use ECHO_QUERIES table
-            # Convert "Home Depot" to "homedepot" and "Lowes" to "lowes" for query_type
             query_type = "homedepot_brand" if x_amazon_type == "Home Depot" else "lowes_brand" if x_amazon_type == "Lowes" else f"{x_amazon_type.lower()}_brand"
-            # For Home Depot and Lowes, use the URL as query value
             query_value = brand_name if x_amazon_type.lower() in ['homedepot', 'lowes'] else brand_name
+            # Use environment type from config
             table_name = "BOABD.INPUTDATA.ECHO_QUERIES_DEV" if RUN_TYPE == "Test" else "BOABD.INPUTDATA.ECHO_QUERIES"
+            st.write(f"Debug - Using {table_name} for {x_amazon_type} submission")  # Debug log
         else:
             # For Amazon submissions, use KEEPA_QUERIES table
             query_type = "manufacturer_only" if selection_type == "Company" else "brand"
             query_value = company_data[3] if selection_type == "Company" else brand_name
-            table_name = KEEPA_QUERIES_TABLE
+            # Use environment type from config
+            table_name = "BOABD.INPUTDATA.KEEPA_QUERIES_DEV" if RUN_TYPE == "Test" else "BOABD.INPUTDATA.KEEPA_QUERIES"
+            st.write(f"Debug - Using {table_name} for Amazon {selection_type} submission")  # Debug log
         
         query = f"""
         INSERT INTO {table_name} (
@@ -214,7 +216,7 @@ def update_selection(selection_type, selection_value, x_amazon_type=None):
                     concat_lead_list_name = "NOTSPECIFIEDUNUSED"
                     request_type = "HomeDepot Brand"
                     status = "0"
-                    is_multiple = "Yes"  # Assume multiple brands for Home Depot
+                    is_multiple = "False"  # Set to False for single brand submission
                     url_value = selection_value  # Use URL for Home Depot
                     requestor_email = st.session_state.requestor_email
                 elif x_amazon_type == "Lowes":
@@ -223,7 +225,7 @@ def update_selection(selection_type, selection_value, x_amazon_type=None):
                     concat_lead_list_name = "NOTSPECIFIEDUNUSED"
                     request_type = "Lowes Brand"
                     status = "0"
-                    is_multiple = "Yes"  # Assume multiple brands for Lowes
+                    is_multiple = "False"  # Set to False for single brand submission
                     url_value = selection_value  # Use URL for Lowes
                     requestor_email = st.session_state.requestor_email
                 elif x_amazon_type == "Target":
@@ -232,18 +234,20 @@ def update_selection(selection_type, selection_value, x_amazon_type=None):
                     concat_lead_list_name = "NOTSPECIFIEDUNUSED"
                     request_type = "Target Brand"
                     status = "0"
-                    is_multiple = "Yes"  # Assume multiple brands for Target
+                    is_multiple = "False"  # Set to False for single brand submission
                     url_value = None
                     requestor_email = st.session_state.requestor_email
+                    st.write(f"Debug - Processing Target brand submission: {selection_value}")  # Debug log
                 elif x_amazon_type == "Walmart":
                     brand_name = selection_value
                     company_name = "NOTSPECIFIEDUNUSED"
                     concat_lead_list_name = "NOTSPECIFIEDUNUSED"
                     request_type = "Walmart Brand"
                     status = "0"
-                    is_multiple = "Yes"  # Assume multiple brands for Walmart
+                    is_multiple = "False"  # Set to False for single brand submission
                     url_value = None
                     requestor_email = st.session_state.requestor_email
+                    st.write(f"Debug - Processing Walmart brand submission: {selection_value}")  # Debug log
                 else:
                     brand_name = selection_value
                     company_name = "NOTSPECIFIEDUNUSED"
@@ -262,6 +266,7 @@ def update_selection(selection_type, selection_value, x_amazon_type=None):
             if ";" in selection_value:
                 # Split the brands and handle them as multiple submissions
                 brands_list = [brand.strip() for brand in selection_value.split(";")]
+                st.write(f"Debug - Multiple brands detected: {brands_list}")  # Debug log
                 update_multiple_brands(brands_list, x_amazon_type)
                 return
 
@@ -312,6 +317,7 @@ def update_selection(selection_type, selection_value, x_amazon_type=None):
                 ))
                 conn.commit()
                 st.success(f"✅ Record Added to Request Table: {selection_value}")
+                st.write(f"Debug - Added to BULLSEYE_REQUEST: {selection_value} with is_multiple={is_multiple}")  # Debug log
             except Exception as e:
                 st.error(f"Failed to insert into BULLSEYE_REQUEST: {str(e)}")
                 return
@@ -365,17 +371,22 @@ def update_multiple_brands(brands_list, x_amazon_type):
                 request_type = "Lowes Brand"
             elif x_amazon_type == "Target":
                 request_type = "Target Brand"
+                st.write(f"Debug - Processing multiple Target brands: {brands_list}")  # Debug log
             elif x_amazon_type == "Walmart":
                 request_type = "Walmart Brand"
+                st.write(f"Debug - Processing multiple Walmart brands: {brands_list}")  # Debug log
             else:
                 # Check if this is a "Brand Not in HubSpot" submission
                 if hasattr(st.session_state, 'submission_type') and st.session_state.submission_type == "Brand Not in HubSpot":
                     request_type = "Amazon Brand Name New"
+                    st.write(f"Debug - Setting request type to Amazon Brand Name New for Brand Not in HubSpot")  # Debug log
                 else:
                     request_type = "Amazon Brand Name"
+                    st.write(f"Debug - Setting request type to Amazon Brand Name for regular submission")  # Debug log
             
             # Set ISMULTIPLEBRANDSUBMISSION based on number of brands
-            is_multiple = 'Yes' if len(brands_list) > 1 else 'No'
+            is_multiple = 'True' if len(brands_list) > 1 else 'False'
+            st.write(f"Debug - Setting is_multiple to {is_multiple} for {len(brands_list)} brands")  # Debug log
             
             for brand in brands_list:
                 query = """
