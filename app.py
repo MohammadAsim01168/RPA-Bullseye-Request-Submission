@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 import pandas as pd
 import uuid
-from config import SNOWFLAKE_CONFIG, KEEPA_QUERIES_TABLE, RUN_TYPE
+from config import SNOWFLAKE_CONFIG, KEEPA_QUERIES_TABLE, RUN_TYPE, ENV_TYPE
 from x_amazon import show_x_amazon_section
 from shared_functions import (
     get_snowflake_connection,
@@ -119,7 +119,7 @@ def insert_into_keepa_table(company_data, req_guid, selection_type, brand_name=N
             query_type = "homedepot_brand" if x_amazon_type == "Home Depot" else "lowes_brand" if x_amazon_type == "Lowes" else f"{x_amazon_type.lower()}_brand"
             # For Home Depot and Lowes, use the URL as query value
             query_value = brand_name if x_amazon_type.lower() in ['homedepot', 'lowes'] else brand_name
-            table_name = "BOABD.INPUTDATA.ECHO_QUERIES_DEV" if RUN_TYPE == "Test" else "BOABD.INPUTDATA.ECHO_QUERIES"
+            table_name = "BOABD.INPUTDATA.ECHO_QUERIES_DEV" if ENV_TYPE == "Test" else "BOABD.INPUTDATA.ECHO_QUERIES"
             st.write(f"Debug - Using ECHO_QUERIES table for {x_amazon_type} submission")  # Debug log
         else:
             # For Amazon submissions, use KEEPA_QUERIES table
