@@ -10,6 +10,7 @@ from shared_functions import (
 from config import RUN_TYPE
 import re
 import uuid
+from datetime import datetime
 
 def validate_url(url):
     """Validate URL and return specific error message if invalid"""
@@ -62,36 +63,72 @@ def show_x_amazon_section():
         with col1:
             st.subheader("Brand-based Retailers")
             
-            # Walmart and Target Section
-            st.write("### Walmart and Target")
+            # Walmart Section
+            st.write("### Walmart")
             walmart_selected = st.checkbox("Walmart", key="walmart_checkbox")
-            target_selected = st.checkbox("Target", key="target_checkbox")
             
-            if walmart_selected or target_selected:
-                # Single search box for both Walmart and Target
-                search_term = st.text_input(
-                    "Search Brand for Walmart/Target:",
+            if walmart_selected:
+                # Search box for Walmart
+                walmart_search = st.text_input(
+                    "Search Brand for Walmart:",
                     help="Type to search for available brands",
-                    key="walmart_target_search"
+                    key="walmart_search"
                 )
                 
-                if search_term:
-                    search_results = search_items(search_term, "Brand Name")
+                if walmart_search:
+                    walmart_results = search_items(walmart_search, "Brand Name")
                     
-                    if search_results:
-                        selected_values = st.multiselect(
-                            "Select Brand(s) for Walmart/Target:",
-                            options=search_results,
-                            key="walmart_target_brand_select"
+                    if walmart_results:
+                        walmart_selected_values = st.multiselect(
+                            "Select Brand(s) for Walmart:",
+                            options=walmart_results,
+                            key="walmart_brand_select"
                         )
                     else:
-                        st.info("No brands found.")
-                        error_messages.append("No brands found for Walmart/Target. Please try a different search term.")
+                        st.info("No brands found for Walmart.")
+                        # Enable Brand Not in HubSpot option when no brands are found
+                        st.info("For multiple brands, enter them separated by semicolons (e.g., brand1;brand2;brand3)")
+                        walmart_not_in_hubspot = st.text_input(
+                            "Walmart Brand Not in HubSpot",
+                            help="Enter brand name(s) separated by semicolons for multiple brands",
+                            key="walmart_not_in_hubspot"
+                        )
+
+            # Target Section
+            st.write("### Target")
+            target_selected = st.checkbox("Target", key="target_checkbox")
+            
+            if target_selected:
+                # Search box for Target
+                target_search = st.text_input(
+                    "Search Brand for Target:",
+                    help="Type to search for available brands",
+                    key="target_search"
+                )
+                
+                if target_search:
+                    target_results = search_items(target_search, "Brand Name")
+                    
+                    if target_results:
+                        target_selected_values = st.multiselect(
+                            "Select Brand(s) for Target:",
+                            options=target_results,
+                            key="target_brand_select"
+                        )
+                    else:
+                        st.info("No brands found for Target.")
+                        # Enable Brand Not in HubSpot option when no brands are found
+                        st.info("For multiple brands, enter them separated by semicolons (e.g., brand1;brand2;brand3)")
+                        target_not_in_hubspot = st.text_input(
+                            "Target Brand Not in HubSpot",
+                            help="Enter brand name(s) separated by semicolons for multiple brands",
+                            key="target_not_in_hubspot"
+                        )
 
         with col2:
             st.subheader("URL-based Retailers")
-            homedepot_selected = st.checkbox("Home Depot")
-            lowes_selected = st.checkbox("Lowes")
+            homedepot_selected = st.checkbox("Home Depot", key="homedepot_checkbox")
+            lowes_selected = st.checkbox("Lowes", key="lowes_checkbox")
 
             if homedepot_selected or lowes_selected:
                 if homedepot_selected:
@@ -116,26 +153,55 @@ def show_x_amazon_section():
                 success_messages = []
                 error_messages = []
 
-                # Handle Walmart and Target submissions
-                if walmart_selected or target_selected:
-                    if 'selected_values' in locals() and selected_values:
+                # Handle Walmart submission
+                if walmart_selected:
+                    if 'walmart_selected_values' in locals() and walmart_selected_values:
+                        # Reset submission type for dropdown selection
+                        st.session_state.submission_type = None
                         # Handle multiple brands
-                        if len(selected_values) > 1:
-                            if walmart_selected:
-                                update_multiple_brands(selected_values, "Walmart")
-                                success_messages.append("Successfully submitted brands to Walmart")
-                            if target_selected:
-                                update_multiple_brands(selected_values, "Target")
-                                success_messages.append("Successfully submitted brands to Target")
+                        if len(walmart_selected_values) > 1:
+                            update_multiple_brands(walmart_selected_values, "Walmart")
+                            success_messages.append("Successfully submitted brands to Walmart")
                         else:
-                            if walmart_selected:
-                                update_selection("Brand", selected_values[0], "Walmart")
-                                success_messages.append("Successfully submitted brand to Walmart")
-                            if target_selected:
-                                update_selection("Brand", selected_values[0], "Target")
-                                success_messages.append("Successfully submitted brand to Target")
+                            update_selection("Brand", walmart_selected_values[0], "Walmart")
+                            success_messages.append("Successfully submitted brand to Walmart")
+                    elif 'walmart_not_in_hubspot' in locals() and walmart_not_in_hubspot:
+                        # Handle Brand Not in HubSpot submissions
+                        st.session_state.submission_type = "Brand Not in HubSpot"
+                        if ";" in walmart_not_in_hubspot:
+                            brands_list = [brand.strip() for brand in walmart_not_in_hubspot.split(";")]
+                            update_multiple_brands(brands_list, "Walmart")
+                            success_messages.append("Successfully submitted new brands to Walmart")
+                        else:
+                            update_selection("Brand", walmart_not_in_hubspot, "Walmart")
+                            success_messages.append("Successfully submitted new brand to Walmart")
                     else:
-                        error_messages.append("Please select or enter brands for Walmart/Target")
+                        error_messages.append("Please select or enter brands for Walmart")
+
+                # Handle Target submission
+                if target_selected:
+                    if 'target_selected_values' in locals() and target_selected_values:
+                        # Reset submission type for dropdown selection
+                        st.session_state.submission_type = None
+                        # Handle multiple brands
+                        if len(target_selected_values) > 1:
+                            update_multiple_brands(target_selected_values, "Target")
+                            success_messages.append("Successfully submitted brands to Target")
+                        else:
+                            update_selection("Brand", target_selected_values[0], "Target")
+                            success_messages.append("Successfully submitted brand to Target")
+                    elif 'target_not_in_hubspot' in locals() and target_not_in_hubspot:
+                        # Handle Brand Not in HubSpot submissions
+                        st.session_state.submission_type = "Brand Not in HubSpot"
+                        if ";" in target_not_in_hubspot:
+                            brands_list = [brand.strip() for brand in target_not_in_hubspot.split(";")]
+                            update_multiple_brands(brands_list, "Target")
+                            success_messages.append("Successfully submitted new brands to Target")
+                        else:
+                            update_selection("Brand", target_not_in_hubspot, "Target")
+                            success_messages.append("Successfully submitted new brand to Target")
+                    else:
+                        error_messages.append("Please select or enter brands for Target")
 
                 # Handle Home Depot submission
                 if homedepot_selected:
@@ -168,8 +234,10 @@ def show_x_amazon_section():
                     st.error(msg)
 
         # Display current selections
-        if 'selected_values' in locals() and selected_values:
-            st.info(f"Current Walmart/Target Selection: {', '.join(selected_values)}")
+        if 'walmart_selected_values' in locals() and walmart_selected_values:
+            st.info(f"Current Walmart Selection: {', '.join(walmart_selected_values)}")
+        if 'target_selected_values' in locals() and target_selected_values:
+            st.info(f"Current Target Selection: {', '.join(target_selected_values)}")
         if 'homedepot_url' in locals() and homedepot_url:
             st.info(f"Current Home Depot URL: {homedepot_url}")
         if 'lowes_url' in locals() and lowes_url:
@@ -214,7 +282,8 @@ def update_selection(selection_type, selection_value, x_amazon_type=None):
                 brand_name = selection_value
                 company_name = "NOTSPECIFIEDUNUSED"
                 concat_lead_list_name = "NOTSPECIFIEDUNUSED"
-                request_type = "Target Brand"
+                # Set request type based on submission type
+                request_type = "Target Brand New" if st.session_state.submission_type == "Brand Not in HubSpot" else "Target Brand"
                 status = "0"
                 is_multiple = "False"  # Set to False for single brand submission
                 url_value = None
@@ -223,7 +292,8 @@ def update_selection(selection_type, selection_value, x_amazon_type=None):
                 brand_name = selection_value
                 company_name = "NOTSPECIFIEDUNUSED"
                 concat_lead_list_name = "NOTSPECIFIEDUNUSED"
-                request_type = "Walmart Brand"
+                # Set request type based on submission type
+                request_type = "Walmart Brand New" if st.session_state.submission_type == "Brand Not in HubSpot" else "Walmart Brand"
                 status = "0"
                 is_multiple = "False"  # Set to False for single brand submission
                 url_value = None
@@ -290,18 +360,15 @@ def update_selection(selection_type, selection_value, x_amazon_type=None):
                 st.error(f"Failed to insert into BULLSEYE_REQUEST: {str(e)}")
                 return
 
-            # Insert into Echo Table and update status
-            try:
-                if insert_into_keepa_table(None, req_guid, "Brand", selection_value, x_amazon_type):
-                    st.success(f"✅ Sent to Echo Table: {selection_value}")
-                    if update_bullseye_status(req_guid, "2"):
-                        st.success(f"✅ Successfully Submitted: {selection_value}")
-                    else:
-                        st.error(f"❌ Failed to update status for: {selection_value}")
+            # For brand submissions, also insert into Keepa Table and update status
+            if insert_into_keepa_table(None, req_guid, selection_type, selection_value, x_amazon_type):
+                st.success(f"✅ Sent to Keepa/Echo Table: {selection_value}")
+                if update_bullseye_status(req_guid, "2"):
+                    st.success(f"✅ Successfully Submitted: {selection_value}")
                 else:
-                    st.error(f"❌ Failed to process {x_amazon_type} request. The request was not added to the processing queue. Please try again or contact support.")
-            except Exception as e:
-                st.error(f"❌ Error processing request: {str(e)}")
+                    st.error(f"❌ Failed to update status for: {selection_value}")
+            else:
+                st.error(f"❌ Failed to process brand '{selection_value}'. The request was not added to the processing queue. Please try again or contact support.")
 
             cursor.close()
             conn.close()
@@ -327,14 +394,14 @@ def update_multiple_brands(brands_list, x_amazon_type):
             elif x_amazon_type == "Lowes":
                 request_type = "Lowes Brand"
             elif x_amazon_type == "Target":
-                request_type = "Target Brand"
+                request_type = "Target Brand New" if st.session_state.submission_type == "Brand Not in HubSpot" else "Target Brand"
             elif x_amazon_type == "Walmart":
-                request_type = "Walmart Brand"
+                request_type = "Walmart Brand New" if st.session_state.submission_type == "Brand Not in HubSpot" else "Walmart Brand"
             else:
                 request_type = "Amazon Brand Name New" if st.session_state.submission_type == "Brand Not in HubSpot" else "Amazon Brand Name"
             
             # Set ISMULTIPLEBRANDSUBMISSION based on number of brands
-            is_multiple = 'True' if len(brands_list) > 1 else 'False'
+            is_multiple = 'Yes' if len(brands_list) > 1 else 'No'
             
             for brand in brands_list:
                 query = """
@@ -385,7 +452,7 @@ def update_multiple_brands(brands_list, x_amazon_type):
             cursor.close()
             conn.close()
 
-            # Insert all brands into Echo Table and update status
+            # Insert all brands into Keepa Table and update status
             keepa_success = True
             for brand in brands_list:
                 if not insert_into_keepa_table(None, req_guid, "Brand", brand, x_amazon_type):
@@ -394,12 +461,10 @@ def update_multiple_brands(brands_list, x_amazon_type):
             
             if keepa_success:
                 if update_bullseye_status(req_guid, "2"):
-                    st.success(f"✅ Record Added to Request Table: {', '.join(brands_list)}")
-                    st.success(f"✅ Sent to Echo Table: {', '.join(brands_list)}")
-                    st.success(f"✅ Successfully Submitted: {', '.join(brands_list)}")
+                    st.success(f"Successfully submitted {len(brands_list)} brand requests")
                 else:
-                    st.error(f"❌ Failed to update status for: {', '.join(brands_list)}")
+                    st.warning(f"Brand requests submitted but status update failed")
             else:
-                st.error(f"❌ Failed to process brands. The request was not added to the processing queue. Please try again or contact support.")
+                st.warning(f"Brand requests submitted but Keepa Table insertion failed for some brands")
         except Exception as e:
             st.error(f"Error submitting multiple brand requests: {str(e)}") 
