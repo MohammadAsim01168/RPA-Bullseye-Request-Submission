@@ -241,7 +241,7 @@ def update_selection(selection_type, selection_value, x_amazon_type=None):
                     brand_name = selection_value
                     company_name = "NOTSPECIFIEDUNUSED"
                     concat_lead_list_name = "NOTSPECIFIEDUNUSED"
-                    request_type = "Target Brand"
+                    request_type = "Target Brand New" if st.session_state.submission_type == "Brand Not in HubSpot" else "Target Brand"
                     status = "0"
                     is_multiple = "Yes"  # Assume multiple brands for Target
                     url_value = None
@@ -250,7 +250,7 @@ def update_selection(selection_type, selection_value, x_amazon_type=None):
                     brand_name = selection_value
                     company_name = "NOTSPECIFIEDUNUSED"
                     concat_lead_list_name = "NOTSPECIFIEDUNUSED"
-                    request_type = "Walmart Brand"
+                    request_type = "Walmart Brand New" if st.session_state.submission_type == "Brand Not in HubSpot" else "Walmart Brand"
                     status = "0"
                     is_multiple = "Yes"  # Assume multiple brands for Walmart
                     url_value = None
@@ -508,7 +508,7 @@ def main():
     # Only proceed if email is valid
     if requestor_email and validate_email(requestor_email)[0]:
         # Create tabs for Amazon and X-Amazon sections
-        tab1, tab2 = st.tabs(["Amazon", "X-Amazon"])
+        tab1, tab2 = st.tabs(["Amazon Submission", "X-Amazon Submission"])
         
         with tab1:
             show_amazon_section()
