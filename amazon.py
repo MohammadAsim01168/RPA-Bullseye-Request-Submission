@@ -1,5 +1,17 @@
 import streamlit as st
 from shared_functions import search_items, update_multiple_brands, update_selection
+import re
+
+def validate_email(email):
+    """Validate email format"""
+    if not email:
+        return False, "Email is required"
+    
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_pattern, email):
+        return False, "Invalid email format"
+    
+    return True, ""
 
 def show_amazon_section():
     st.title("Amazon Submission")
@@ -78,6 +90,8 @@ def show_amazon_section():
                     if st.button("Submit Selected Brands"):
                         with st.spinner('Submitting Amazon brands...'):
                             if selected_values:
+                                # Reset submission type for dropdown selection
+                                st.session_state.submission_type = None
                                 if len(selected_values) > 1:
                                     update_multiple_brands(selected_values, None)
                                 else:
