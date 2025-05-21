@@ -49,9 +49,13 @@ def show_x_amazon_section():
 
     # Add a loading spinner while initializing
     with st.spinner('Initializing X-Amazon application...'):
-        # Initialize session state for X-Amazon search results
+        # Initialize session state for X-Amazon search results and selected brands
         if 'x_amazon_search_results' not in st.session_state:
             st.session_state.x_amazon_search_results = None
+        if 'walmart_selected_brands' not in st.session_state:
+            st.session_state.walmart_selected_brands = []
+        if 'target_selected_brands' not in st.session_state:
+            st.session_state.target_selected_brands = []
 
         # Initialize messages lists
         success_messages = []
@@ -79,11 +83,16 @@ def show_x_amazon_section():
                     walmart_results = search_items(walmart_search, "Brand Name")
                     
                     if walmart_results:
+                        # Combine new search results with previously selected brands
+                        all_walmart_options = list(set(walmart_results + st.session_state.walmart_selected_brands))
                         walmart_selected_values = st.multiselect(
                             "Select Brand(s) for Walmart:",
-                            options=walmart_results,
+                            options=all_walmart_options,
+                            default=st.session_state.walmart_selected_brands,
                             key="walmart_brand_select"
                         )
+                        # Update session state with current selections
+                        st.session_state.walmart_selected_brands = walmart_selected_values
                     else:
                         st.info("No brands found for Walmart.")
                         # Enable Brand Not in HubSpot option when no brands are found
@@ -110,11 +119,16 @@ def show_x_amazon_section():
                     target_results = search_items(target_search, "Brand Name")
                     
                     if target_results:
+                        # Combine new search results with previously selected brands
+                        all_target_options = list(set(target_results + st.session_state.target_selected_brands))
                         target_selected_values = st.multiselect(
                             "Select Brand(s) for Target:",
-                            options=target_results,
+                            options=all_target_options,
+                            default=st.session_state.target_selected_brands,
                             key="target_brand_select"
                         )
+                        # Update session state with current selections
+                        st.session_state.target_selected_brands = target_selected_values
                     else:
                         st.info("No brands found for Target.")
                         # Enable Brand Not in HubSpot option when no brands are found
