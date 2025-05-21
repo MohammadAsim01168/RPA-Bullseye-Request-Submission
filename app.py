@@ -474,8 +474,8 @@ def main():
         st.session_state.requestor_email = "mohammad.asim@spreetail.com"
     if 'amazon_search_results' not in st.session_state:
         st.session_state.amazon_search_results = None
-    if 'submission_type' not in st.session_state:
-        st.session_state.submission_type = None
+    if 'amazon_submission_type' not in st.session_state:
+        st.session_state.amazon_submission_type = None
 
     # Requestor Information Section
     st.subheader("Requestor Information")
