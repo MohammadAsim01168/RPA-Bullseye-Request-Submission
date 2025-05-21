@@ -17,19 +17,78 @@ def show_amazon_section():
     st.title("Amazon Submission")
 
     # Add a loading spinner while initializing
-    with st.spinner('Initializing Amazon application...'):
-        # Initialize session state for Amazon search results
+    with st.spinner('Initializing application...'):
+        # Initialize session state for search results and selected brands
         if 'amazon_search_results' not in st.session_state:
             st.session_state.amazon_search_results = None
+        if 'amazon_selected_brands' not in st.session_state:
+            st.session_state.amazon_selected_brands = []
 
-        # Selection type radio button
+        # Selection type radio buttons
         selection_type = st.radio(
-            "Select Type:",
-            ["Company Name", "Brand Name"],
-            key="amazon_selection_type"
+            "Select Submission Type:",
+            ["Brand Name", "Company Name"],
+            key="amazon_submission_type"  # Changed key to avoid conflicts
         )
 
-        if selection_type == "Company Name":
+        if selection_type == "Brand Name":
+            # Search box for brand selection
+            search_term = st.text_input(
+                "Search Brand:",
+                help="Type to search for available brands",
+                key="amazon_brand_search"
+            )
+            
+            if search_term:
+                search_results = search_items(search_term, "Brand Name")
+                st.session_state.amazon_search_results = search_results
+                
+                if search_results:
+                    # Combine new search results with previously selected brands
+                    all_brand_options = list(set(search_results + st.session_state.amazon_selected_brands))
+                    selected_values = st.multiselect(
+                        "Select Brand(s):",
+                        options=all_brand_options,
+                        default=st.session_state.amazon_selected_brands,
+                        key="amazon_brand_select"
+                    )
+                    # Update session state with current selections
+                    st.session_state.amazon_selected_brands = selected_values
+                    
+                    if st.button("Submit Selected Brands"):
+                        with st.spinner('Submitting Amazon brands...'):
+                            if selected_values:
+                                # Reset submission type for dropdown selection
+                                st.session_state.submission_type = None
+                                if len(selected_values) > 1:
+                                    update_multiple_brands(selected_values, None)
+                                else:
+                                    update_selection("Brand", selected_values[0])
+                                st.success("Successfully submitted brands to Amazon")
+                            else:
+                                st.warning("Please select at least one brand.")
+                else:
+                    st.info("No brands found.")
+                    # Enable Brand Not in HubSpot option when no brands are found
+                    st.info("For multiple brands, enter them separated by semicolons (e.g., brand1;brand2;brand3)")
+                    brand_not_in_hubspot = st.text_input(
+                        "Brand Not in HubSpot",
+                        help="Enter brand name(s) separated by semicolons for multiple brands",
+                        key="amazon_not_in_hubspot"
+                    )
+                    if brand_not_in_hubspot and st.button("Submit Brand Not in HubSpot"):
+                        with st.spinner('Submitting brand(s) not in HubSpot...'):
+                            # Set submission type for Brand Not in HubSpot
+                            st.session_state.submission_type = "Brand Not in HubSpot"
+                            if ";" in brand_not_in_hubspot:
+                                # Split the brands and handle them as multiple submissions
+                                brands_list = [brand.strip() for brand in brand_not_in_hubspot.split(";")]
+                                update_multiple_brands(brands_list, None)
+                            else:
+                                update_selection("Brand", brand_not_in_hubspot)
+                            st.success("Successfully submitted brand(s) to Amazon")
+
+        elif selection_type == "Company Name":
             # Search box for company selection
             search_term = st.text_input(
                 "Search Company:",
@@ -66,59 +125,6 @@ def show_amazon_section():
                             st.success(f"Successfully submitted company: {selected_company}")
                 else:
                     st.info("No companies found.")
-
-        else:  # Brand Name selection
-            # Search box for brand selection
-            search_term = st.text_input(
-                "Search Brand:",
-                help="Type to search for available brands",
-                key="amazon_brand_search"
-            )
-            
-            if search_term:
-                search_results = search_items(search_term, "Brand Name")
-                st.session_state.amazon_search_results = search_results
-                
-                if search_results:
-                    # For brand search, results are already just brand names
-                    selected_values = st.multiselect(
-                        "Select Brand(s):",
-                        options=search_results,
-                        key="amazon_brand_select"
-                    )
-                    
-                    if st.button("Submit Selected Brands"):
-                        with st.spinner('Submitting Amazon brands...'):
-                            if selected_values:
-                                # Reset submission type for dropdown selection
-                                st.session_state.submission_type = None
-                                if len(selected_values) > 1:
-                                    update_multiple_brands(selected_values, None)
-                                else:
-                                    update_selection("Brand", selected_values[0])
-                                st.success("Successfully submitted brands to Amazon")
-                            else:
-                                st.warning("Please select at least one brand.")
-                else:
-                    st.info("No brands found.")
-                    # Enable Brand Not in HubSpot option when no brands are found
-                    st.info("For multiple brands, enter them separated by semicolons (e.g., brand1;brand2;brand3)")
-                    brand_not_in_hubspot = st.text_input(
-                        "Brand Not in HubSpot",
-                        help="Enter brand name(s) separated by semicolons for multiple brands",
-                        key="amazon_not_in_hubspot"
-                    )
-                    if brand_not_in_hubspot and st.button("Submit Brand Not in HubSpot"):
-                        with st.spinner('Submitting brand(s) not in HubSpot...'):
-                            # Set the submission type before processing
-                            st.session_state.submission_type = "Brand Not in HubSpot"
-                            if ";" in brand_not_in_hubspot:
-                                # Split the brands and handle them as multiple submissions
-                                brands_list = [brand.strip() for brand in brand_not_in_hubspot.split(";")]
-                                update_multiple_brands(brands_list, None)
-                            else:
-                                update_selection("Brand", brand_not_in_hubspot)
-                            st.success("Successfully submitted brand(s) to Amazon")
 
     # Display Amazon current selection
     if selection_type == "Brand Name" and 'selected_values' in locals() and selected_values:
