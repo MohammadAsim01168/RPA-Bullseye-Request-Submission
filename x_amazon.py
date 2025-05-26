@@ -7,6 +7,7 @@ from shared_functions import (
     insert_into_keepa_table,
     update_bullseye_status
 )
+from send_email import send_email_notification
 from config import RUN_TYPE
 import re
 import uuid
@@ -244,6 +245,60 @@ def show_x_amazon_section():
                     st.success(msg)
                 for msg in error_messages:
                     st.error(msg)
+
+                # Send email notification if there were successful submissions
+                if success_messages:
+                    # Collect all submitted values for email notification
+                    submitted_values = []
+                    
+                    # Helper function to format submissions
+                    def format_retailer_submissions(retailer, values):
+                        if not values:
+                            return None
+                        # Handle both list and string inputs
+                        if isinstance(values, str):
+                            values = [values]
+                        # Remove any empty strings
+                        values = [v.strip() for v in values if v and v.strip()]
+                        if not values:
+                            return None
+                        return f"{retailer}: {', '.join(values)}"
+                    
+                    # Collect submissions for each retailer
+                    walmart_submissions = format_retailer_submissions(
+                        "Walmart", 
+                        walmart_selected_values if 'walmart_selected_values' in locals() and walmart_selected_values 
+                        else [walmart_not_in_hubspot] if 'walmart_not_in_hubspot' in locals() and walmart_not_in_hubspot 
+                        else None
+                    )
+                    
+                    target_submissions = format_retailer_submissions(
+                        "Target", 
+                        target_selected_values if 'target_selected_values' in locals() and target_selected_values 
+                        else [target_not_in_hubspot] if 'target_not_in_hubspot' in locals() and target_not_in_hubspot 
+                        else None
+                    )
+                    
+                    homedepot_submission = format_retailer_submissions(
+                        "Home Depot", 
+                        [homedepot_url] if 'homedepot_url' in locals() and homedepot_url 
+                        else None
+                    )
+                    
+                    lowes_submission = format_retailer_submissions(
+                        "Lowes", 
+                        [lowes_url] if 'lowes_url' in locals() and lowes_url 
+                        else None
+                    )
+                    
+                    # Combine all submissions, filtering out None values
+                    all_submissions = [s for s in [walmart_submissions, target_submissions, homedepot_submission, lowes_submission] if s]
+                    query_value = " | ".join(all_submissions) if all_submissions else ""
+                    
+                    # Only send email if we have a non-empty query value
+                    if query_value:
+                        if send_email_notification(query_value, st.session_state.requestor_email):
+                            st.success("Email notification sent successfully")
 
         # Display current selections
         if 'walmart_selected_values' in locals() and walmart_selected_values:
