@@ -6,7 +6,7 @@ import streamlit as st
 # Change this value to switch between environments:
 # ENV_TYPE = "Prod"  # For Production
 # ENV_TYPE = "Test"  # For Testing
-ENV_TYPE = "Test"  # Hardcoded to Test environment
+ENV_TYPE = "Prod"  # Hardcoded to Test environment
 # =============================================
 
 # Table configurations based on environment
