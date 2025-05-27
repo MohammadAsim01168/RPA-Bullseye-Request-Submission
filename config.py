@@ -45,4 +45,4 @@ KEEPA_SNOWFLAKE_CONFIG = {
     'database': os.getenv('RPA_BULLSEYE_SNOWFLAKE_DATABASE'),
     'schema': os.getenv('RPA_BULLSEYE_SNOWFLAKE_SCHEMA'),
     'role': os.getenv('RPA_BULLSEYE_SNOWFLAKE_ROLE')
-} 
+}

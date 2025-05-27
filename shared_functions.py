@@ -358,18 +358,16 @@ def update_selection(selection_type, selection_value, x_amazon_type=None):
         except Exception as e:
             st.error(f"Error submitting request: {str(e)}")
 
-def update_multiple_brands(brands_list, x_amazon_type=None, req_guid=None, request_type=None, is_multiple=None):
+def update_multiple_brands(brands_list, x_amazon_type):
     """Handle multiple brand submissions with the same REQ_GUID"""
     conn = get_snowflake_connection()
     if conn:
         try:
             cursor = conn.cursor()
-            if not req_guid:
-                req_guid = str(uuid.uuid4())
-            # Get requestor from session state
-            requestor = st.session_state.requestor_name
+            req_guid = str(uuid.uuid4())
+            # Get requestor from session state or use global default
+            requestor = st.session_state.get('requestor_name', REQUESTOR)
             run_type = RUN_TYPE  # Use RUN_TYPE from config
-            requestor_email = st.session_state.requestor_email  # Add requestor email
             
             # Determine request type based on submission type and X-Amazon type
             if x_amazon_type == "Home Depot":
@@ -377,18 +375,23 @@ def update_multiple_brands(brands_list, x_amazon_type=None, req_guid=None, reque
             elif x_amazon_type == "Lowes":
                 request_type = "Lowes Brand"
             elif x_amazon_type == "Target":
-                request_type = "Target Brand New" if st.session_state.submission_type == "Brand Not in HubSpot" else "Target Brand"
+                request_type = "Target Brand"
+                st.write(f"Debug - Processing multiple Target brands: {brands_list}")  # Debug log
             elif x_amazon_type == "Walmart":
-                request_type = "Walmart Brand New" if st.session_state.submission_type == "Brand Not in HubSpot" else "Walmart Brand"
+                request_type = "Walmart Brand"
+                st.write(f"Debug - Processing multiple Walmart brands: {brands_list}")  # Debug log
             else:
-                request_type = "Amazon Brand Name New" if st.session_state.submission_type == "Brand Not in HubSpot" else "Amazon Brand Name"
+                # Check if this is a "Brand Not in HubSpot" submission
+                if hasattr(st.session_state, 'submission_type') and st.session_state.submission_type == "Brand Not in HubSpot":
+                    request_type = "Amazon Brand Name New"
+                    st.write(f"Debug - Setting request type to Amazon Brand Name New for Brand Not in HubSpot")  # Debug log
+                else:
+                    request_type = "Amazon Brand Name"
+                    st.write(f"Debug - Setting request type to Amazon Brand Name for regular submission")  # Debug log
             
-            # Only set is_multiple if not provided
-            if is_multiple is None:
-                is_multiple = "TRUE" if len(brands_list) > 1 else "FALSE"
-            
-            # Debug log
-            st.write(f"Debug - update_multiple_brands: is_multiple={is_multiple}, brands_list={brands_list}")
+            # Set ISMULTIPLEBRANDSUBMISSION based on number of brands
+            is_multiple = 'True' if len(brands_list) > 1 else 'False'
+            st.write(f"Debug - Setting is_multiple to {is_multiple} for {len(brands_list)} brands")  # Debug log
             
             for brand in brands_list:
                 query = """
@@ -428,7 +431,7 @@ def update_multiple_brands(brands_list, x_amazon_type=None, req_guid=None, reque
                     brand,  # brand is already a string
                     request_type,
                     requestor,
-                    requestor_email,
+                    st.session_state.requestor_email,  # Add requestor email
                     is_multiple,
                     req_guid,
                     run_type,
@@ -448,10 +451,12 @@ def update_multiple_brands(brands_list, x_amazon_type=None, req_guid=None, reque
             
             if keepa_success:
                 if update_bullseye_status(req_guid, "2"):
-                    st.success(f"Successfully submitted {len(brands_list)} brand requests")
+                    st.success(f"✅ Record Added to Request Table: {', '.join(brands_list)}")
+                    st.success(f"✅ Sent to Keepa/Echo Table: {', '.join(brands_list)}")
+                    st.success(f"✅ Successfully Submitted: {', '.join(brands_list)}")
                 else:
-                    st.warning(f"Brand requests submitted but status update failed")
+                    st.error(f"❌ Failed to update status for: {', '.join(brands_list)}")
             else:
-                st.warning(f"Brand requests submitted but Keepa Table insertion failed for some brands")
+                st.error(f"❌ Failed to process brands. The request was not added to the processing queue. Please try again or contact support.")
         except Exception as e:
-            st.error(f"Error submitting multiple brand requests: {str(e)}") 
+            st.error(f"Error submitting multiple brand requests: {str(e)}")

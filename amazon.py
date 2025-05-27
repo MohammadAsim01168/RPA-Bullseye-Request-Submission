@@ -238,4 +238,4 @@ def show_amazon_section():
                 st.error(f"Error searching companies: {str(e)}")
 
 if __name__ == "__main__":
-    show_amazon_section() 
+    show_amazon_section()
