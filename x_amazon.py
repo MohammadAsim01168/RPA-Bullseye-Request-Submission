@@ -75,7 +75,7 @@ def show_x_amazon_section():
             if walmart_selected:
                 # Search box for Walmart
                 walmart_search = st.text_input(
-                    "Search Brand for Walmart:",
+                    "Search Brands from HubSpot for Walmart:",
                     help="Type to search for available brands",
                     key="walmart_search"
                 )
@@ -95,10 +95,10 @@ def show_x_amazon_section():
                         # Update session state with current selections
                         st.session_state.walmart_selected_brands = walmart_selected_values
                     else:
-                        st.info("No brands found for Walmart.")
+                        st.info("No brands found in HubSpot for Walmart.")
                         # Enable Brand Not in HubSpot option when no brands are found
                         walmart_not_in_hubspot = st.text_input(
-                            "Walmart Brand Not in HubSpot",
+                            "Add Brands not in HubSpot for Walmart",
                             help="Enter brand name(s) separated by semicolons for multiple brands",
                             key="walmart_not_in_hubspot"
                         )
@@ -110,7 +110,7 @@ def show_x_amazon_section():
             if target_selected:
                 # Search box for Target
                 target_search = st.text_input(
-                    "Search Brand for Target:",
+                    "Search Brands from HubSpot for Target:",
                     help="Type to search for available brands",
                     key="target_search"
                 )
@@ -130,10 +130,10 @@ def show_x_amazon_section():
                         # Update session state with current selections
                         st.session_state.target_selected_brands = target_selected_values
                     else:
-                        st.info("No brands found for Target.")
+                        st.info("No brands found in HubSpot for Target.")
                         # Enable Brand Not in HubSpot option when no brands are found
                         target_not_in_hubspot = st.text_input(
-                            "Target Brand Not in HubSpot",
+                            "Add Brands not in HubSpot for Target",
                             help="Enter brand name(s) separated by semicolons for multiple brands",
                             key="target_not_in_hubspot"
                         )
@@ -174,10 +174,10 @@ def show_x_amazon_section():
                         # Handle multiple brands
                         if len(walmart_selected_values) > 1:
                             update_multiple_brands(walmart_selected_values, "Walmart")
-                            success_messages.append("Successfully submitted brands to Walmart")
+                            success_messages.append("Successfully submitted brands from HubSpot to Walmart")
                         else:
                             update_selection("Brand", walmart_selected_values[0], "Walmart")
-                            success_messages.append("Successfully submitted brand to Walmart")
+                            success_messages.append("Successfully submitted brand from HubSpot to Walmart")
                     elif 'walmart_not_in_hubspot' in locals() and walmart_not_in_hubspot:
                         # Handle Brand Not in HubSpot submissions
                         st.session_state.submission_type = "Brand Not in HubSpot"
@@ -199,10 +199,10 @@ def show_x_amazon_section():
                         # Handle multiple brands
                         if len(target_selected_values) > 1:
                             update_multiple_brands(target_selected_values, "Target")
-                            success_messages.append("Successfully submitted brands to Target")
+                            success_messages.append("Successfully submitted brands from HubSpot to Target")
                         else:
                             update_selection("Brand", target_selected_values[0], "Target")
-                            success_messages.append("Successfully submitted brand to Target")
+                            success_messages.append("Successfully submitted brand from HubSpot to Target")
                     elif 'target_not_in_hubspot' in locals() and target_not_in_hubspot:
                         # Handle Brand Not in HubSpot submissions
                         st.session_state.submission_type = "Brand Not in HubSpot"

@@ -1,5 +1,6 @@
 import streamlit as st
 from shared_functions import search_items, update_multiple_brands, update_selection
+from send_email import send_email_notification
 import re
 import uuid
 import time
@@ -44,7 +45,7 @@ def show_amazon_section():
         col1, col2 = st.columns(2)
 
         with col1:
-            st.subheader("Search Existing Brands")
+            st.subheader("Search Brands from HubSpot")
             # Search box for brand selection
             search_term = st.text_input(
                 "Search Brand:",
@@ -85,7 +86,7 @@ def show_amazon_section():
                     st.session_state.amazon_selected_brands = selected_values
 
         with col2:
-            st.subheader("Add New Brands")
+            st.subheader("Add Brands not in HubSpot")
             st.info("For multiple brands, enter them separated by semicolons (e.g., brand1;brand2;brand3)")
             manual_brands = st.text_area(
                 "Enter New Brand(s):",
@@ -132,9 +133,9 @@ def show_amazon_section():
                         is_multiple = "TRUE" if total_brands > 1 else "FALSE"  # Changed to uppercase TRUE/FALSE
                         
                         # Debug log
-                        st.write(f"Debug - Total brands: {total_brands}, is_multiple: {is_multiple}")
-                        st.write(f"Debug - Dropdown brands: {dropdown_brands}")
-                        st.write(f"Debug - Manual brands: {manual_brands}")
+                        # st.write(f"Debug - Total brands: {total_brands}, is_multiple: {is_multiple}")
+                        # st.write(f"Debug - Dropdown brands: {dropdown_brands}")
+                        # st.write(f"Debug - Manual brands: {manual_brands}")
                         
                         # Handle dropdown brands first (Amazon Brand Name)
                         if dropdown_brands:
@@ -148,7 +149,7 @@ def show_amazon_section():
                                         request_type="Amazon Brand Name",
                                         is_multiple=is_multiple  # Use the same is_multiple for all submissions
                                     )
-                                st.success(f"✅ Successfully submitted existing brands: {', '.join(dropdown_brands)}")
+                                st.success(f"Successfully submitted brands from HubSpot: {', '.join(dropdown_brands)}")
                         
                         # Handle manual brands (Amazon Brand Name New)
                         if manual_brands:
@@ -164,10 +165,15 @@ def show_amazon_section():
                                         request_type="Amazon Brand Name New",
                                         is_multiple=is_multiple  # Use the same is_multiple for all submissions
                                     )
-                                st.success(f"✅ Successfully submitted new brands: {', '.join(manual_brands)}")
+                                st.success(f"Successfully submitted new brands: {', '.join(manual_brands)}")
                         
                         # Store success message in session state
                         st.session_state.success_message = f"Successfully submitted {len(all_brands)} brand(s) with request GUID: {req_guid}"
+                        
+                        # Send email notification after successful submission
+                        query_value = ", ".join(all_brands)  # Combine all brands into a single string
+                        if send_email_notification(query_value, st.session_state.requestor_email):
+                            st.success("Email notification sent successfully")
                         
                         # Clear the form after successful submission
                         st.session_state.amazon_search_results = None
@@ -175,7 +181,7 @@ def show_amazon_section():
                         st.session_state.submission_type = None
                         
                         # Display final success message
-                        st.success(st.session_state.success_message)
+                        st.success(f"Successfully submitted {len(all_brands)} brand(s)")
                         
                         # Use rerun with a delay to keep the message visible
                         time.sleep(2)  # Wait for 2 seconds
@@ -186,7 +192,7 @@ def show_amazon_section():
 
         # Display current selections
         if st.session_state.amazon_selected_brands:
-            st.info(f"Selected Existing Brands: {', '.join(st.session_state.amazon_selected_brands)}")
+            st.info(f"Selected Brands from HubSpot: {', '.join(st.session_state.amazon_selected_brands)}")
         
         # Get manual brands from the text area widget
         manual_brands_text = st.session_state.amazon_manual_brands
@@ -220,6 +226,10 @@ def show_amazon_section():
                             if selected_company:
                                 update_selection("Company", selected_company)
                                 st.success("Successfully submitted company to Amazon")
+                                
+                                # Send email notification for company submission
+                                if send_email_notification(selected_company, st.session_state.requestor_email):
+                                    st.success("Email notification sent successfully")
                             else:
                                 st.warning("Please select a company.")
                 else:
