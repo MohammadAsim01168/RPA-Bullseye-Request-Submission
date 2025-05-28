@@ -467,6 +467,13 @@ def main():
         layout="wide"
     )
 
+    # Add SOP links in the top right
+    col1, col2 = st.columns([0.85, 0.15])
+    with col1:
+        st.write("")  # Empty space to push help links to the right
+    with col2:
+        st.markdown("[SOP Document](https://vminnovations.sharepoint.com/:w:/s/MarketResearch/EZ5Y22RZmmdMpfn3ouMDt5sBEb8xpTFeJ4vgEMwxUwheSg?e=vOuV1T)")
+
     # Initialize session state variables
     if 'requestor_name' not in st.session_state:
         st.session_state.requestor_name = "RPA Bot"
@@ -478,14 +485,15 @@ def main():
         st.session_state.amazon_submission_type = None
 
     # Requestor Information Section
-    st.subheader("Requestor Information")
+    st.subheader("👤 Requestor Info")
+    
     col1, col2 = st.columns(2)
     
     with col1:
         requestor_name = st.text_input(
             "Requestor Name:",
             value=st.session_state.requestor_name,
-            help="Name of the person making the request"
+            help="Enter your full name. This will be used to track your submissions."
         )
         st.session_state.requestor_name = requestor_name
     
@@ -493,7 +501,7 @@ def main():
         requestor_email = st.text_input(
             "Requestor Email:",
             value=st.session_state.requestor_email,
-            help="Email address of the requestor (required)",
+            help="Enter your work email address. You will receive confirmation emails at this address.",
             placeholder="Enter your email address"
         )
         if not requestor_email:
@@ -505,15 +513,123 @@ def main():
             else:
                 st.session_state.requestor_email = requestor_email
 
+    st.markdown("""
+    <style>
+    .small-text {
+        font-size: 12px;
+        color: #ff0000;
+        font-style: italic;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2rem;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 3rem;
+        white-space: pre-wrap;
+        gap: 1rem;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    .stTabs [aria-selected="true"] {
+        border-bottom: 3px solid #1a73e8;
+        color: #1a73e8;
+        font-weight: 600;
+    }
+    .instruction-box {
+        background-color: #f5f5f5;
+        padding: 20px;
+        border-radius: 5px;
+        margin: 10px 0;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<p class="small-text">** Please provide your information above. This is required for tracking your submissions and sending confirmation emails.</p>', unsafe_allow_html=True)
+
     # Only proceed if email is valid
     if requestor_email and validate_email(requestor_email)[0]:
         # Create tabs for Amazon and X-Amazon sections
         tab1, tab2 = st.tabs(["Amazon Submission", "X-Amazon Submission"])
         
         with tab1:
+            st.markdown("""
+            <div class="instruction-box">
+            <h3 style="font-style: italic;">📝 Instructions</h3>
+            <div style="font-size: 11px; line-height: 1.6; font-style: italic;">
+            <p><strong>1. Choose Submission Type</strong></p>
+            <ul>
+                <li>Select either Brand Name or Company Name as your submission type.</li>
+                <li>Brand Name: Submit one or more individual brands.</li>
+                <li>Company Name: Submit a single company name.</li>
+            </ul>
+
+            <p><strong>2. If Submitting a Brand Name</strong></p>
+            <ul>
+                <li>Search for your brand(s) in the HubSpot dropdown.</li>
+                <li>If available, select the brand(s) from the dropdown. You can select multiple.</li>
+                <li>If not listed, enter the brand name(s) manually in the Add Brands not in HubSpot textbox.
+                    <ul>
+                        <li>You can use both options—select some from the dropdown and add others manually.</li>
+                        <li>To submit multiple brand names manually, separate them with a semicolon (;).</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <p><strong>3. If Submitting a Company Name</strong></p>
+            <ul>
+                <li>Search for the company name in the dropdown list.</li>
+                <li>Select the company from the dropdown.</li>
+                <li>Note: Only one company can be submitted per request.</li>
+            </ul>
+
+            <p><strong>4. Submit Your Request</strong></p>
+            <ul>
+                <li>Click the Submit button.</li>
+                <li>You will receive an email confirmation once your submission is received.</li>
+            </ul>
+            </div>
+            </div>
+            """, unsafe_allow_html=True)
+
             show_amazon_section()
         
         with tab2:
+            st.markdown("""
+            <div class="instruction-box">
+            <h3 style="font-style: italic;">📝 Instructions</h3>
+            <div style="font-size: 11px; line-height: 1.6; font-style: italic;">
+            <p><strong>1. Select Retailers</strong></p>
+            <ul>
+                <li>Check the boxes next to the retailers you wish to submit your request.</li>
+                <li>You can select multiple retailers in one submission.</li>
+            </ul>
+
+            <p><strong>2. For Walmart and Target</strong></p>
+            <ul>
+                <li>Search for your brand in the HubSpot dropdown.
+                    <ul>
+                        <li>If found, select it from the list.</li>
+                        <li>If not found, enter the brand name manually in the Add Brands not in HubSpot textbox.</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <p><strong>3. For Home Depot and Lowes</strong></p>
+            <ul>
+                <li>Provide the full brand URL, starting with http:// or https://.</li>
+                <li>Make sure the URL is correct and accessible.</li>
+            </ul>
+
+            <p><strong>4. Submit Your Request</strong></p>
+            <ul>
+                <li>Click the Submit All Selected Retailers button once all entries are complete.</li>
+                <li>You will receive an email confirmation upon successful submission.</li>
+            </ul>
+            </div>
+            </div>
+            """, unsafe_allow_html=True)
+
             show_x_amazon_section()
 
 if __name__ == "__main__":
